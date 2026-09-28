@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>共享待看</title>
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="共享待看">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- 没带房间号时：我的房间列表 -->
+<div id="screenRooms" hidden>
+  <header class="center">
+    <h1>共享待看</h1>
+    <p class="muted small">你的房间。每个房间一份清单，配一个或几个朋友。</p>
+  </header>
+
+  <div id="roomList" class="room-list"></div>
+
+  <div class="new-room">
+    <input id="newRoomName" type="text" maxlength="20" placeholder="新房间叫什么？比如「和小林」">
+    <p id="roomErr" class="err"></p>
+    <button id="createRoomBtn" class="primary">建一个新房间</button>
+  </div>
+
+  <div class="backup">
+    <p class="muted small">换手机、加到主屏幕、或者浏览器数据被清空了？<br>
+      用找回码就能把所有房间一次拿回来。</p>
+
+    <div class="backup-btns">
+      <button id="copyMyLink" class="ghost-btn">复制我的找回码</button>
+      <button id="showRestore" class="ghost-btn">我要找回房间</button>
+    </div>
+
+    <div id="restoreBox" hidden>
+      <input id="restoreInput" type="text" placeholder="把找回码粘在这里">
+      <p id="restoreErr" class="err"></p>
+      <button id="restoreBtn" class="primary">找回我的房间</button>
+    </div>
+
+    <p class="muted" style="font-size:12px;margin-top:10px">
+      找回码等于你的身份，别发给别人。<br>
+      要拉朋友进房间，用房间里的「邀请」按钮。</p>
+  </div>
+
+  <div class="notify" id="notifyBox" hidden>
+    <p class="muted small" id="notifyText"></p>
+    <button id="notifyBtn" class="ghost-btn" hidden></button>
+  </div>
+</div>
+
+<!-- 带了房间号但我还不是成员 -->
+<div id="screenJoin" hidden>
+  <div class="gate-card">
+    <h2>加入 <span id="joinRoomName"></span></h2>
+    <div id="claimList"></div>
+    <p id="joinHint" class="muted small">设个名字和头像，同一个人在不同房间可以不一样。</p>
+    <button id="joinBtn" class="primary">加入</button>
+  </div>
+</div>
+
+<div id="screenError" hidden>
+  <div class="gate-card">
+    <h2>打不开</h2>
+    <p id="errorText" class="muted"></p>
+    <p class="small" style="margin-top:16px">
+      <button class="link-btn" data-act="hard-refresh">刷新到最新版</button>
+      　<a href="?">回到房间列表</a>
+    </p>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <div class="head-row">
+      <h1 id="roomTitle">…</h1>
+      <button id="inviteBtn" class="link-btn">邀请</button>
+      <a href="?" class="link-btn">切换房间</a>
+    </div>
+    <div class="head-row sub">
+      <span id="memberStrip" class="member-strip"></span>
+      <button id="meChip" class="chip" title="点一下改名字和头像"></button>
+    </div>
+  </header>
+
+  <p id="soloHint" class="solo-hint" hidden></p>
+
+  <section class="adder">
+    <textarea id="pasteBox" rows="2"
+      placeholder="粘贴分享文本，比如「【标题】 https://b23.tv/xxxxx」"></textarea>
+
+    <div id="preview" class="preview" hidden>
+      <div class="preview-head">
+        <span id="previewBadge" class="badge">链接</span>
+        <span id="previewUrl" class="preview-url"></span>
+      </div>
+      <input id="titleInput" type="text" maxlength="120" placeholder="标题">
+    </div>
+
+    <p id="pasteErr" class="err"></p>
+    <button id="addBtn" class="primary">加入清单</button>
+  </section>
+
+  <nav class="tabs">
+    <button id="tabTodo" class="active">待看</button>
+    <button id="tabDone">已完成</button>
+  </nav>
+
+  <main id="list"></main>
+
+  <footer>
+    <p class="muted small">视频存在原平台，这里只记链接、进度和大家的想法。</p>
+    <p class="small"><button class="link-btn" data-act="hard-refresh">出问题了？点这里刷新到最新版</button></p>
+  </footer>
+</div>
+
+<div id="members" class="modal" hidden>
+  <div class="modal-card wide">
+    <h2>房间成员</h2>
+    <p class="muted small">重复或不用的成员可以移除。只要房间里还有人没打勾，条目就不会归档。</p>
+    <div id="memberList"></div>
+    <div class="modal-btns">
+      <button id="membersClose" type="button" class="ghost-btn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="editor" class="modal" hidden>
+  <div class="modal-card">
+    <h2 id="editorTitle">你的资料</h2>
+    <div id="editorAvatar" class="editor-avatar"></div>
+    <div class="avatar-actions">
+      <label class="ghost-btn">上传照片<input id="photoInput" type="file" accept="image/*" hidden></label>
+      <button id="clearAvatar" type="button" class="ghost-btn">用首字母</button>
+    </div>
+    <div id="emojiGrid" class="emoji-grid"></div>
+    <input id="nameInput" type="text" maxlength="12" placeholder="你的名字">
+    <p id="editorErr" class="err"></p>
+    <div class="modal-btns">
+      <button id="editorCancel" type="button" class="ghost-btn">取消</button>
+      <button id="editorSave" type="button" class="primary">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="parse.js"></script>
+<script src="store.js"></script>
+<script src="app.js"></script>
+<script>
+/* 保证用户永远跑在最新代码上。
+   之前没有这套机制：sw.js 内容不变 → 浏览器认为没新版本 → 老客户端
+   可能一直跑旧代码，而数据库结构已经变了。 */
+(function () {
+  if (!('serviceWorker' in navigator) || !location.protocol.startsWith('http')) return;
+
+  // 首次安装也会触发 controllerchange，那次不该刷新
+  var hadController = !!navigator.serviceWorker.controller;
+  var reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+    if (!hadController || reloading) return;
+    reloading = true;
+    location.reload();
+  });
+
+  navigator.serviceWorker.register('sw.js').then(function (reg) {
+    // update() 返回 promise，网络一抖就 reject。
+    // 不接住的话手机上会刷一片未捕获异常，而这本来就是「查不到就算了」的事。
+    var check = function () { reg.update().catch(function () {}); };
+    check();
+    // 长期挂在主屏上的 PWA 不会重新加载，定时问一次有没有新版
+    setInterval(check, 30 * 60 * 1000);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) check();
+    });
+  }).catch(function () {});
+})();
+
+/* 兜底自救：注销 SW + 清空缓存 + 重新加载。
+   注意不动 localStorage —— 那里存着「我在这个房间是谁」，清了就得重新加入。 */
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest && e.target.closest('[data-act="hard-refresh"]');
+  if (!btn) return;
+  btn.textContent = '正在刷新…';
+  var jobs = [];
+  if (navigator.serviceWorker) {
+    jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
+      return Promise.all(rs.map(function (r) { return r.unregister(); }));
+    }));
+  }
+  if (window.caches) {
+    jobs.push(caches.keys().then(function (ks) {
+      return Promise.all(ks.map(function (k) { return caches.delete(k); }));
+    }));
+  }
+  Promise.all(jobs).catch(function () {}).then(function () {
+    location.replace(location.href.split('#')[0]);
+  });
+});
+</script>
+</body>
+</html>

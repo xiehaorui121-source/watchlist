@@ -1,0 +1,9 @@
+# 本地配置：含项目地址和 key
+config.js
+# 任何密钥文件
+.env
+*.env
+vapid*.json
+# 系统与依赖
+.DS_Store
+node_modules/
